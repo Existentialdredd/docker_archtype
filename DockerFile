@@ -1,0 +1,13 @@
+ARG OWNER=ericpe
+ARG BASE_CONTAINER=nvcr.io/nvidia/pytorch:22.02-py3
+FROM $BASE_CONTAINER
+
+LABEL maintainer="ExistentialDredd kaftra@yahoo.com"
+
+USER root
+
+RUN pip install spacy nltk benepar ftfy \
+                regex tqdm jupyterlab-vim \
+                dataclasses-json boto3 streamlit
+
+RUN python -m spacy download en_core_web_md

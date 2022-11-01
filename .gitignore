@@ -1,0 +1,10 @@
+*.DS_Store
+*.ipynb_checkpoints
+token.pickle
+credentials.json
+*__pycache__
+*.pdf
+*.texpadtmp
+*.swp
+*.swo
+*.egg-info/

@@ -1,0 +1,135 @@
+#!/bin/bash
+
+# ENVS
+PROJECTDIR="<root_dir_of_project>"
+CONTAINER="<container_name>"
+CONTAINERHOMEDIR="workspace"
+IMAGE="<image_name>"
+STRMLTAPPNAME="<file_name_of_streamlit_app>"
+MODULES=()
+#Local Paths
+LOCALPROJECTROOT="$HOME/<path_to_local_project>"
+LOCALDATAROOT="<path_to_local_data_folder>"
+LOCALMODELROOT="<path_to_local_model_directory>"
+LOCALCOMMAND="docker"
+LOCALSTREAMLITPORT="10003"
+LOCALJUPYTERPORT="10004"
+#Remote Paths
+REMOTEPROJECTROOT="<path_to_remote_project>"
+REMOTEDATAROOT="<path_to_remote_data_folder>"
+REMOTEMODELROOT="<path_to_remote_model_directory>"
+REMOTECOMMAND="sudo nvidia-docker"
+REMOTESTREAMLITPORT="10001"
+REMOTEJUPYTERPORT="10002"
+
+remote_run=false
+local_run=true
+streamlit_run=false
+start_cont=false
+kill_cont=false
+restart_cont=false
+
+# Function To Setup All Modules
+setup_module() {
+    MODULE=${1:-root}
+    case $MODULE in
+        "root")
+            MODULEPATH=$CONTAINERHOMEDIR$PROJECTDIR;;
+        *)
+            MODULEPATH=$CONTAINERHOMEDIR$PROJECTDIR$MODULE;;
+    esac
+
+    eval "$COMMAND exec -it $CONTAINER sh -c 'cd $MODULEPATH && python setup.py develop'"
+    case ${?} in
+        0)
+            echo "Successful Setup: \n   $MODULEPATH";;
+        *)
+            echo "Setup Failed: \n   $MODULEPATH";;
+    esac
+}
+
+# Capturing Subcommands
+case "$1" in
+    start)
+        start_cont=true;;
+    kill)
+        kill_cont=true;;
+    restart)
+        kill_cont=true
+        start_cont=true;;
+esac
+
+# Capturing Flag Options
+while getopts "rs" flag
+do
+    case "${flag}" in
+        r)
+            local_run=false
+            remote_run=true;;
+        s)
+            streamlit_run=true;;
+        \?)
+            echo "Error Invalid Flag"
+            exit;;
+    esac
+done
+
+# Modifying Values For Run Type
+if $local_run; then
+    echo "Local Run"
+    PROJECTROOT=$LOCALPROJECTROOT
+    DATAROOT=$LOCALDATAROOT
+    MODELROOT=$LOCALMODELROOT
+    COMMAND=$LOCALCOMMAND
+    STREAMLITPORT=$LOCALSTREAMLITPORT
+    JUPYTERPORT=$LOCALJUPYTERPORT
+elif $remote_run; then
+    echo "Remote Run"
+    PROJECTROOT=$REMOTEPROJECTROOT
+    DATAROOT=$REMOTEDATAROOT
+    MODELROOT=$REMOTEMODELROOT
+    COMMAND=$REMOTECOMMAND
+    STREAMLITPORT=$REMOTESTREAMLITPORT
+    JUPYTERPORT=$REMOTEJUPYTERPORT
+fi
+
+# Killing A Container
+if $kill; then
+    echo "Killing Container: $CONTAINER"
+    eval "$COMMAND CONTAINER"
+
+# Starting A Container
+if $start; then
+    eval "$COMMAND run -d -t" \
+         "--name $CONTAINER --rm" \
+         "-v $DATAROOT/data:$CONTAINERHOMEDIR/data" \
+         "-v $MODELROOT/models:$CONTAINERHOMEDIR/data" \
+         "--user root" \
+         "-e $WORKDIR=$CONTAINERHOMEDIR/data" \
+         "-e $GRANT_SUDO=yes" \
+         "-e CHOWN_HOME=yes" \
+         "-e CHOWN_HOME_OPTS='-R'" \
+         "-e DATADIR=$DATAROOT/data" \
+         "-e MODELDIR=$MODELROOT/models" \
+         "-e STREAMLIT_SERVER_PORT=80" \
+         "-p $JUPYTERPORT:8888" \
+         "-p $STREAMLITPORT:80" \
+         "$IMAGE"
+
+    # Setup Modules
+    setup_module()
+
+    for module in "${MODULES[@]}"; do
+        setup_module(module)
+    done
+
+    # Jupyter Lab Startup
+    eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR &&" \
+                                            "jupyter lab --LabApp.token=""'"
+
+    # StreamLit App Startup
+    eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR/apps &&" \
+                                            "python -m streamlit run $STRMLTAPPNAME'"
+
+    eval "$COMMAND exec -it $CONTAINER bash"
+
