@@ -1,0 +1,31 @@
+#!/bin/bash
+
+DIRPATH="${1}"
+SCRIPT_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" && cd .. &> /dev/null && pwd )
+
+COPYFILES=(".flake8" ".gitignore" "DockerFile"
+           "setup.py" "scripts/container" "scripts/repo_setup")
+COPYDIRS=(".config" ".jupyter" "modules" "notebooks" "src")
+
+if [[ -d $DIRPATH ]]; then
+    echo "Directory $DIRPATH Exists"
+    for dir in "${COPYDIRS[@]}"; do
+        cp -R "$SCRIPT_ROOT/$dir" "$DIRPATH/$dir"
+    done
+
+    if [[ ! -d $DIRPATH/scripts ]]; then
+        mkdir -p $DIRPATH/scripts
+    fi
+
+    for filepath in "${COPYFILES[@]}"; do
+        cp "$SCRIPT_ROOT/$filepath" "$DIRPATH/$filepath"
+    done
+
+else
+    echo "Directory $DIRPATH Does Not Exist"
+    exit 1
+fi
+
+
+
+
