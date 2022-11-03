@@ -39,7 +39,7 @@ setup_module() {
             MODULEPATH=$CONTAINERHOMEDIR$PROJECTDIR$MODULE;;
     esac
 
-    eval "$COMMAND exec -it $CONTAINER sh -c 'cd $MODULEPATH && python setup.py develop'"
+    eval "$COMMAND exec -t $CONTAINER sh -c 'cd $MODULEPATH && python setup.py develop'"
     case ${?} in
         0)
             echo "Successful Setup: \n   $MODULEPATH";;
@@ -94,12 +94,13 @@ elif $remote_run; then
 fi
 
 # Killing A Container
-if $kill; then
+if $kill_cont; then
     echo "Killing Container: $CONTAINER"
     eval "$COMMAND CONTAINER"
+fi
 
 # Starting A Container
-if $start; then
+if $start_cont; then
     eval "$COMMAND run -d -t" \
          "--name $CONTAINER --rm" \
          "-v $DATAROOT/data:$CONTAINERHOMEDIR/data" \
@@ -117,19 +118,22 @@ if $start; then
          "$IMAGE"
 
     # Setup Modules
-    setup_module()
+    setup_module
 
     for module in "${MODULES[@]}"; do
-        setup_module(module)
+        setup_module $module
     done
 
     # Jupyter Lab Startup
     eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR &&" \
-                                            "jupyter lab --LabApp.token=""'"
+                                            "jupyter lab --LabApp.token="" "
+                                            " --LabApp.config ="$PROJECTROOT/.jupyter/jupyter_lab_config.py" '"
 
     # StreamLit App Startup
-    eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR/apps &&" \
-                                            "python -m streamlit run $STRMLTAPPNAME'"
+    if streamlit_run; then
+        eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR/apps &&" \
+                                                "python -m streamlit run $STRMLTAPPNAME'"
+    fi
 
     eval "$COMMAND exec -it $CONTAINER bash"
-
+fi
