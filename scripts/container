@@ -8,7 +8,7 @@ IMAGE="<image_name>"
 STRMLTAPPNAME="<file_name_of_streamlit_app>"
 MODULES=()
 #Local Paths
-LOCALPROJECTROOT="$HOME/<path_to_local_project>"
+LOCALPROJECTROOT="<path_to_local_project>"
 LOCALDATAROOT="<path_to_local_data_folder>"
 LOCALMODELROOT="<path_to_local_model_directory>"
 LOCALCOMMAND="docker"
@@ -96,18 +96,19 @@ fi
 # Killing A Container
 if $kill_cont; then
     echo "Killing Container: $CONTAINER"
-    eval "$COMMAND CONTAINER"
+    eval "$COMMAND $CONTAINER"
 fi
 
 # Starting A Container
 if $start_cont; then
     eval "$COMMAND run -d -t" \
          "--name $CONTAINER --rm" \
+         "-v $PROJECTDIR$PROJECTDIR:$CONTAINERHOMEDIR$PROJECTDIR" \
          "-v $DATAROOT/data:$CONTAINERHOMEDIR/data" \
-         "-v $MODELROOT/models:$CONTAINERHOMEDIR/data" \
+         "-v $MODELROOT/models:$CONTAINERHOMEDIR/models" \
          "--user root" \
-         "-e $WORKDIR=$CONTAINERHOMEDIR/data" \
-         "-e $GRANT_SUDO=yes" \
+         "-e WORKDIR=$CONTAINERHOMEDIR$PROJECTDIR" \
+         "-e GRANT_SUDO=yes" \
          "-e CHOWN_HOME=yes" \
          "-e CHOWN_HOME_OPTS='-R'" \
          "-e DATADIR=$DATAROOT/data" \
@@ -126,11 +127,11 @@ if $start_cont; then
 
     # Jupyter Lab Startup
     eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR &&" \
-                                            "jupyter lab --LabApp.token="" "
-                                            " --LabApp.config ="$PROJECTROOT/.jupyter/jupyter_lab_config.py" '"
+                                            "jupyter lab --LabApp.token="" " \
+                                            " --LabApp.config="$PROJECTROOT/.jupyter/jupyter_lab_config.py" '"
 
     # StreamLit App Startup
-    if streamlit_run; then
+    if $streamlit_run; then
         eval "$COMMAND exec -d $CONTAINER sh -c 'cd $CONTAINERHOMEDIR$PROJECTDIR/apps &&" \
                                                 "python -m streamlit run $STRMLTAPPNAME'"
     fi
