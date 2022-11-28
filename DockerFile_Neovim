@@ -1,0 +1,34 @@
+ARG OWNER=ericpe
+ARG BASE_CONTAINER=nvcr.io/nvidia/pytorch:22.02-py3
+FROM $BASE_CONTAINER
+
+LABEL maintainer="ExistentialDredd kaftra@yahoo.com"
+
+USER root
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ENV TZ=America/New_York
+
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:neovim-ppa/stable && \
+    apt-get install -y neovim
+
+RUN cd $HOME && \
+    git clone https://github.com/Existentialdredd/vimrc.git && \
+    mv vimrc dot_files && \
+    cd dot_files && git checkout personal_docker && \
+    cd symlinks && chmod +x links && ./links
+
+RUN sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+
+RUN pip install spacy nltk ftfy transformers dataclasses-json \
+                regex tqdm jupyterlab-vim boto3 streamlit 'opencv-python-headless==4.5.5.62' neovim pynvim
+
+RUN pip install --upgrade jupyterlab
+
+RUN pip install jupyter_tensorboard selectivesearch torch_snippets scikit-image
+
+RUN python -m pip uninstall -y opencv-python
